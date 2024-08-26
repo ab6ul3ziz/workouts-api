@@ -1,7 +1,9 @@
+const { uploadImages } = require("../Cloudinary/upload");
 const userModel = require("../models/userModel");
 const workoutModel = require("../models/workoutModel");
 const Workout = require("../models/workoutModel");
 const mongoose = require("mongoose");
+
 const getWorkouts = async (req, res) => {
   const user_id = req.user._id;
   const workouts = await Workout.find({ user_id });
@@ -30,6 +32,8 @@ const getSingleWorkout = async (req, res) => {
 };
 
 const createWorkout = async (req, res) => {
+  const { title, load, reps, image, user_id } = req.body;
+
   let emptyFields = [];
   if (!req.body.title) emptyFields.push("title");
   if (!req.body.load) emptyFields.push("load");
@@ -40,7 +44,15 @@ const createWorkout = async (req, res) => {
       .json({ error: "pleas fill in all the fields", emptyFields });
   try {
     const user_id = req.user._id;
-    const workout = await Workout.create({ ...req.body, user_id });
+    const secures = await uploadImages(image);
+
+    const workout = await Workout.create({
+      title,
+      load,
+      reps,
+      image: [...secures],
+      user_id,
+    });
     res.status(200).json(workout);
   } catch (error) {
     res.status(404).json({ error: error.message });
@@ -108,7 +120,7 @@ const getSavedWorkouts = async (req, res) => {
     const savedWorkouts = await workoutModel.find({
       _id: { $in: user.savedWorkouts },
     });
-    console.log(savedWorkouts);
+
     // console.log(savedWorkouts);
     res.status(200).json(savedWorkouts);
   } catch (error) {
@@ -123,7 +135,6 @@ const unSaveWorkout = async (req, res) => {
       { _id: userId },
       { $pull: { savedWorkouts: workoutId } }
     );
-    console.log(findAndUnasave);
     res.status(200).json({ workoutId });
   } catch (error) {
     console.log(error);
